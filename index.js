@@ -1,67 +1,46 @@
-var express = require('express');
-var bodyParser = require('body-parser');
-var mongoose = require('mongoose');
-var btoa = require ('btoa');
 
-var app = express();
 
-// app.use(express.static(__dirname+ "/"));
-
-var urlSchema = new mongoose.Schema({
-    url: ''
-    // Date: ''
+const express = require("express");
+const bodyParser = require("body-parser");
+const mongoose = require("mongoose");
+const cors = require("cors");
+const mongoURI = "mongodb://localhost/url-shortner";
+const connectOptions = { 
+  keepAlive: true, 
+  reconnectTries: Number.MAX_VALUE 
+}; 
+//Connect to MongoDB 
+mongoose.Promise = global.Promise; 
+mongoose.connect(mongoURI, connectOptions, (err, db) => 
+{ 
+  if (err) console.log(`Error`, err); 
+  console.log(`Connected to MongoDB`); 
+}); 
+const app = express(); 
+app.use(function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Content-type,Accept,x-access-token,X-Key"
+  );
+  if (req.method == "OPTIONS") {
+    res.status(200).end();
+  } else {
+    next();
+  }
 });
 
+app.use(bodyParser.json());
+const PORT = 3000; 
 
-// bodyparser setup
-app.use(bodyParser.urlencoded({ extended: true }));
+require('./models/UrlShorten');
+require("./routes/urlshorten")(app);
+app.use(bodyParser.urlencoded({ extended : true}));
 app.use(bodyParser.json());
 
-// mongoose connection
-mongoose.Promise = global.Promise;
-mongoose.connect('mongodb://localhost/URLshortner');
 
 
-app.get("/",(req,res) => {
-    res.sendFile(__dirname + '/index.html');
-});
-
-//Api to short the url
-app.post('/short', function(req, res, next) {
-    var urlData = req.body.url;
-    URL.findOne({url: urlData}, function(err, url) {
-        if(url) {
-            console.log('URL found in DB');
-            res.send({
-                url: urlData,
-                hash: btoa(doc._id),
-                status: 200,
-                statusTxt: 'OK'
-            });
-        } else {
-            console.log(' URL not found in DB');
-            var url = new URL({
-                url: urlData
-            });
-            url.save(function(err) {
-                if(err) {
-                    return console.error(err);
-                }
-                res.send({
-                    url: urlData,
-                    hash: btoa(url._id),
-                    status: 200,
-                    statusTxt: 'OK'
-                });
-            });
-        }
-    });
-});
-
-
-
-app.listen(3000,()=>{
-    console.log(
-        "Server is runnig at Port 3000"
-    )
+app.listen(PORT, () => { 
+  console.log(`Server started on port`, PORT); 
 });
